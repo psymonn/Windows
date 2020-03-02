@@ -1,0 +1,115 @@
+-------------------------------
+Setup external ntp server:
+-------------------------------
+w32tm /config /syncfromflags:manual /manualpeerlist:"172.17.5.130 0.au.pool.ntp.org 1.au.pool.ntp.org 2.au.pool.ntp.org 3.au.pool.ntp.org"
+
+firewwall allow udp and port 123
+
+w32tm /config /update
+w32tm /config /reliable:yes
+
+net stop w32time && net start w32time  (dos)
+net stop w32time ; net start w32time  (powershell)
+
+w32tm /query /status
+w32tm /query /configuration
+
+-----------------------------------
+Setup internal clock
+-----------------------------------
+https://www.interfacett.com/blogs/creating-standalone-ntp-server-windows/
+Basicly just enable the TimeProviders/ntpserver in the registry (simply edit the name:enabled to 1)
+
+-----------------------
+Test: internal clock
+-----------------------
+Must show this:
+
+[TimeProviders]
+
+NtpServer (Local)
+DllName: C:\Windows\system32\w32time.dll (Local)
+Enabled: 1 (Local)
+InputProvider: 0 (Local)
+AllowNonstandardModeCombinations: 1 (Local)
+
+VMICTimeProvider (Local)
+DllName: C:\Windows\System32\vmictimeprovider.dll (Local)
+Enabled: 1 (Local)
+InputProvider: 1 (Local)
+NtpClient (Local)
+DllName: C:\Windows\system32\w32time.dll (Local)
+Enabled: 0 (Policy)
+InputProvider: 1 (Local)
+
+
+PS C:\Users\Administrator> w32tm /query /source
+Local CMOS Clock
+
+---------------
+Test2:
+----------------
+use the same as Test1 to query external ntp server
+you will expect ntp server listed
+
+
+check date and time:
+date
+
+-------------------------------------------------------
+Locate current Primary Domain Controller server (PDC)
+-------------------------------------------------------
+PS C:\Users\Administrator> netdom query fsmo
+Schema master               REDINK-DC-01.redink.com
+Domain naming master        REDINK-DC-01.redink.com
+PDC                         REDINK-DC-01.redink.com
+RID pool manager            REDINK-DC-01.redink.com
+Infrastructure master       REDINK-DC-01.redink.com
+The command completed successfully.
+
+--------------------------------------------------
+External NTP Server Setting to use GPO only:  (from Server)
+--------------------------------------------------
+https://theitbros.com/configure-ntp-time-sync-group-policy/
+Configure NtpServer client server list: 
+NtpSever: 0.au.pool.ntp.org,0x1 1.au.pool.ntp.org,0x1 2.au.pool.ntp.org,0x1 3.au.pool.ntp.org,0x1
+Type: NTP
+after finished type: gpupdate /force
+
+Roll back if server didn;t work configure the same from client only:
+Configure NtpServer client server list: 
+NtpServer: 172.17.5.130,0x9
+Type: NT5DS
+
+---------------------------------------
+Other server setting if needed:
+---------------------------------------
+SERVER:
+w32tm /config /syncfromflags:manual /manualpeerlist:"172.17.5.130 0.au.pool.ntp.org 1.au.pool.ntp.org 2.au.pool.ntp.org 3.au.pool.ntp.org"
+
+w32tm /config /manualpeerlist:<peers> /syncfromflags:MANUAL /reliable:YES /update
+w32tm /config /manualpeerlist:some.timeserver.net /syncfromflags:MANUAL /reliable:YES /update
+
+------------------------------------------------------------------------------
+Use this commands at client computer to query time:
+------------------------------------------------------------------------------
+CLIENT
+gpupdate /force
+w32tm /resync   or w32tm /resync /rediscover
+w32tm /query /status
+w32tm /query /peers
+
+---------------------------
+Restore configure:
+----------------------------
+Restore Timeserver and clear configuration:
+Configure NtpServer client server list: 
+net stop w32time
+w32tm /unregister
+w32tm /register
+net start w32time
+
+*retart the computer.
+check regedit -> computer\hkey_local_machines\system\currentControlSet\Servces\W32Time\Parameters
+should be reset back to default value
+
