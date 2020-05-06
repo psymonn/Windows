@@ -1,0 +1,13 @@
+1. go here https://www.hdat2.com/download.html and download the latest img file only (hdat2img_60b5.img)
+2. run rufus=2.17 
+
+---------
+before using max size, remove hidden size:
+      
+before hd2: wd   2,930,265,476 KB (K=1024)  (contains hpa)
+
+after using max size, remove hidden size:      
+after hd2:  wd  2,930,266,532 KB (removed hpa)
+
+
+-------important for raid disk to have the same size-----
